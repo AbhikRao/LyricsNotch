@@ -1,0 +1,13 @@
+LyricsNotch Installation
+========================
+
+1. Drag LyricsNotch.app into your Mac's Applications folder.
+2. Open Applications.
+3. Right-click LyricsNotch.app and choose Open.
+4. Confirm Open if macOS shows the unidentified developer warning.
+5. Allow Spotify Automation access when macOS asks.
+6. Camera access is optional and is requested only if Camera Preview is enabled.
+
+This free community build is ad-hoc signed and not Apple-notarized.
+
+Lyrics are supplied by LRCLIB. LyricsNotch is a GPL-3.0 derivative of Boring Notch.
