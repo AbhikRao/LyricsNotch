@@ -80,6 +80,15 @@ That local-testing build is ad-hoc signed and may require right-clicking
 
 On first Spotify access, macOS should ask for Automation permission. Lyrics are fetched from LRCLIB using `https://lrclib.net/api/search`.
 
+## Website
+
+The landing page lives in `website/` and is static HTML/CSS. Open
+`website/index.html` directly or serve the folder locally:
+
+```bash
+python3 -m http.server 8080 --directory website
+```
+
 ## License
 
 GPL-3.0-compatible derivative of Boring Notch. See `NOTICE.md`.

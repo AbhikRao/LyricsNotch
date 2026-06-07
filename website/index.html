@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LyricsNotch | Spotify lyrics for your Mac notch</title>
+    <meta
+      name="description"
+      content="LyricsNotch is a lightweight macOS notch app that shows live Spotify lyrics in a smooth Dynamic Island-style panel."
+    />
+    <link rel="icon" href="./assets/lyricsnotch-logo.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="LyricsNotch home">
+        <img src="./assets/lyricsnotch-logo.png" alt="" />
+        <span>LyricsNotch</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/AbhikRao/LyricsNotch">GitHub</a>
+      </nav>
+      <a class="header-cta" href="https://github.com/AbhikRao/LyricsNotch/releases/download/v0.1.0/LyricsNotch-0.1.0-arm64.dmg">
+        Download
+      </a>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">For Apple Silicon MacBooks</p>
+          <h1>Spotify lyrics, tucked beautifully into your notch.</h1>
+          <p class="lede">
+            LyricsNotch turns the MacBook notch into a smooth live lyrics island with Spotify controls,
+            album-art glow, and synchronized lyric highlighting.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="https://github.com/AbhikRao/LyricsNotch/releases/download/v0.1.0/LyricsNotch-0.1.0-arm64.dmg">
+              Download for macOS
+            </a>
+            <a class="button secondary" href="https://github.com/AbhikRao/LyricsNotch">
+              View source
+            </a>
+          </div>
+          <p class="trust-note">Free community build. Open source. Built for the MacBook notch.</p>
+        </div>
+
+        <div class="hero-visual" aria-label="LyricsNotch app preview">
+          <div class="screen">
+            <div class="notch"></div>
+            <div class="island">
+              <div class="album-wrap">
+                <img src="./assets/lyricsnotch-logo.png" alt="" />
+              </div>
+              <div class="track">
+                <span class="song">Brooklyn Baby</span>
+                <span class="artist">Lana Del Rey</span>
+                <div class="progress"><span></span></div>
+              </div>
+              <div class="lyrics">
+                <span>They say I'm too young to love you</span>
+                <strong>Oh, it's just how we feel</strong>
+                <span>How we feel</span>
+              </div>
+            </div>
+            <div class="dock-line"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section intro">
+        <p class="section-kicker">A focused music utility</p>
+        <h2>Designed to feel like it belongs on macOS.</h2>
+        <p>
+          LyricsNotch borrows the calm, polished rhythm of modern Mac software: soft depth, crisp panels,
+          readable type, and motion that stays out of your way.
+        </p>
+      </section>
+
+      <section class="feature-grid" id="features" aria-label="LyricsNotch features">
+        <article>
+          <span class="feature-icon">♪</span>
+          <h3>Synced Spotify lyrics</h3>
+          <p>Fetches live LRC lyrics from LRCLIB and highlights the current line from Spotify playback time.</p>
+        </article>
+        <article>
+          <span class="feature-icon">◐</span>
+          <h3>Dynamic ambient glow</h3>
+          <p>Uses album art color to create a subtle glow around the notch while music is playing.</p>
+        </article>
+        <article>
+          <span class="feature-icon">⌘</span>
+          <h3>Lightweight Mac app</h3>
+          <p>Built with SwiftUI and AppKit, with the extra Boring Notch features removed for a focused experience.</p>
+        </article>
+      </section>
+
+      <section class="download-panel" id="install">
+        <div>
+          <p class="section-kicker">Version 0.1.0</p>
+          <h2>Download the free community build.</h2>
+          <p>
+            Open the DMG, drag LyricsNotch to Applications, then right-click and choose Open the first time
+            because this build is not Apple-notarized.
+          </p>
+        </div>
+        <div class="download-actions">
+          <a class="button primary" href="https://github.com/AbhikRao/LyricsNotch/releases/download/v0.1.0/LyricsNotch-0.1.0-arm64.dmg">
+            Download DMG
+          </a>
+          <a class="checksum" href="https://github.com/AbhikRao/LyricsNotch/releases/download/v0.1.0/LyricsNotch-0.1.0-arm64.dmg.sha256">
+            SHA-256 checksum
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>LyricsNotch</span>
+      <a href="https://github.com/AbhikRao/LyricsNotch">GitHub</a>
+      <a href="https://github.com/AbhikRao/LyricsNotch/releases/tag/v0.1.0">Release notes</a>
+    </footer>
+  </body>
+</html>
