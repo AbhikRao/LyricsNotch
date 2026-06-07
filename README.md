@@ -82,11 +82,11 @@ On first Spotify access, macOS should ask for Automation permission. Lyrics are 
 
 ## Website
 
-The landing page lives in `website/` and is static HTML/CSS. Open
-`website/index.html` directly or serve the folder locally:
+The landing page lives in `docs/` and is static HTML/CSS. Open
+`docs/index.html` directly or serve the folder locally:
 
 ```bash
-python3 -m http.server 8080 --directory website
+python3 -m http.server 8080 --directory docs
 ```
 
 ## License
