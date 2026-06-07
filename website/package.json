@@ -1,0 +1,10 @@
+{
+  "name": "lyricsnotch-website",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "preview": "python3 -m http.server 8080",
+    "deploy": "vercel --prod"
+  }
+}

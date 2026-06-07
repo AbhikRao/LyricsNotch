@@ -82,11 +82,21 @@ On first Spotify access, macOS should ask for Automation permission. Lyrics are 
 
 ## Website
 
-The landing page lives in `docs/` and is static HTML/CSS. Open
-`docs/index.html` directly or serve the folder locally:
+The landing page is live at `https://lyricsnotch.vercel.app`.
+
+The source lives in `website/` and is deployed with Vercel. Open
+`website/index.html` directly or serve the folder locally:
 
 ```bash
-python3 -m http.server 8080 --directory docs
+cd website
+npm run preview
+```
+
+Deploy to Vercel:
+
+```bash
+cd website
+npm run deploy
 ```
 
 ## License
