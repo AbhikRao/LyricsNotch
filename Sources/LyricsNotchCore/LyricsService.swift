@@ -10,6 +10,7 @@ public enum LyricsServiceError: Error, Equatable {
 public final class LyricsService {
     private var cache: [String: [LyricLine]] = [:]
     private let session: URLSession
+    private let requestTimeout: TimeInterval = 25
 
     public init(session: URLSession = .shared) {
         self.session = session
@@ -30,7 +31,7 @@ public final class LyricsService {
             return cached
         }
 
-        let directRecord = try await fetchDirectRecord(
+        let directRecord = try? await fetchDirectRecord(
             trackName: trackName,
             artistName: artistName,
             albumName: albumName,
@@ -41,10 +42,10 @@ public final class LyricsService {
         if let directRecord {
             records = [directRecord]
         } else {
-            records = try await fetchSearchRecords(
+            records = (try? await fetchSearchRecords(
                 trackName: trackName,
                 artistName: artistName
-            )
+            )) ?? []
         }
         guard let record = Self.bestRecord(
             from: records,
@@ -60,7 +61,38 @@ public final class LyricsService {
             ) {
                 throw LyricsServiceError.instrumental
             }
-            throw LyricsServiceError.missingSyncedLyrics
+            let fallbackRecords = directRecord == nil ? records : ((try? await fetchSearchRecords(
+                trackName: trackName,
+                artistName: artistName
+            )) ?? records)
+
+            if Self.hasMatchingInstrumental(
+                in: fallbackRecords,
+                trackName: trackName,
+                artistName: artistName,
+                duration: duration
+            ) {
+                throw LyricsServiceError.instrumental
+            }
+
+            guard let fallbackRecord = Self.bestRecord(
+                from: fallbackRecords,
+                trackName: trackName,
+                artistName: artistName,
+                duration: duration
+            ),
+                  let synced = fallbackRecord.syncedLyrics,
+                  !synced.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw LyricsServiceError.missingSyncedLyrics
+            }
+
+            let lines = LRCParser.parse(synced)
+            guard !lines.isEmpty else {
+                throw LyricsServiceError.missingSyncedLyrics
+            }
+
+            cache[key] = lines
+            return lines
         }
 
         guard let synced = record.syncedLyrics,
@@ -116,6 +148,34 @@ public final class LyricsService {
         trackName: String,
         artistName: String
     ) async throws -> [LRCLIBRecord] {
+        var records: [LRCLIBRecord] = []
+
+        if let structured = try? await fetchStructuredSearchRecords(
+            trackName: trackName,
+            artistName: artistName
+        ) {
+            records.append(contentsOf: structured)
+        }
+
+        if records.isEmpty,
+           let loose = try? await fetchLooseSearchRecords(
+            trackName: trackName,
+            artistName: artistName
+           ) {
+            records.append(contentsOf: loose)
+        }
+
+        if records.isEmpty {
+            throw LyricsServiceError.missingSyncedLyrics
+        }
+
+        return records
+    }
+
+    private func fetchStructuredSearchRecords(
+        trackName: String,
+        artistName: String
+    ) async throws -> [LRCLIBRecord] {
         guard var components = URLComponents(string: "https://lrclib.net/api/search") else {
             throw LyricsServiceError.invalidURL
         }
@@ -134,16 +194,50 @@ public final class LyricsService {
         return try JSONDecoder().decode([LRCLIBRecord].self, from: data)
     }
 
+    private func fetchLooseSearchRecords(
+        trackName: String,
+        artistName: String
+    ) async throws -> [LRCLIBRecord] {
+        guard var components = URLComponents(string: "https://lrclib.net/api/search") else {
+            throw LyricsServiceError.invalidURL
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "q", value: "\(trackName) \(artistName)")
+        ]
+
+        let (data, response) = try await performRequest(with: components)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode) else {
+            throw LyricsServiceError.badResponse
+        }
+
+        return try JSONDecoder().decode([LRCLIBRecord].self, from: data)
+    }
+
     private func performRequest(with components: URLComponents) async throws -> (Data, URLResponse) {
         guard let url = components.url else {
             throw LyricsServiceError.invalidURL
         }
 
         var request = URLRequest(url: url)
-        request.setValue("LyricsNotch/0.1", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 8
+        request.setValue("LyricsNotch/0.1.1 (https://github.com/AbhikRao/LyricsNotch)", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = requestTimeout
 
-        return try await session.data(for: request)
+        var latestError: Error?
+        for attempt in 0..<3 {
+            do {
+                return try await session.data(for: request)
+            } catch {
+                latestError = error
+                if attempt < 2 {
+                    try? await Task.sleep(nanoseconds: UInt64(350_000_000 * (attempt + 1)))
+                }
+            }
+        }
+
+        throw latestError ?? LyricsServiceError.badResponse
     }
 
     public static func bestRecord(

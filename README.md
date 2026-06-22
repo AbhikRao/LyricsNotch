@@ -18,32 +18,23 @@ open .build/LyricsNotch.app
 
 ## Package A DMG
 
+Public DMG distribution is paused for now. The packaging script is still kept in the repo for future releases:
+
 ```bash
 chmod +x scripts/package_dmg.sh
 ./scripts/package_dmg.sh
 ```
 
-The release image and SHA-256 checksum are written to `dist/`. The DMG opens
-with `LyricsNotch.app`, an Applications shortcut, and a background prompt that
-says to drag the app to Applications and then double click to open.
+## Install From Source
 
-## Install The Free Community Build
-
-This project currently ships as a free ad-hoc signed community build, not an
-Apple-notarized paid Developer ID build.
-
-1. Download and open `LyricsNotch-0.1.0-arm64.dmg`.
-2. Drag `LyricsNotch.app` onto the Applications shortcut.
-3. In Applications, right-click `LyricsNotch.app` and choose **Open**.
-4. Confirm **Open** if macOS shows the unidentified developer warning.
-5. Allow Spotify Automation access when macOS asks.
-
-Advanced users can remove Gatekeeper quarantine from an installed copy with:
+Build the app bundle locally:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/LyricsNotch.app
-open /Applications/LyricsNotch.app
+./scripts/package_app.sh
+open .build/LyricsNotch.app
 ```
+
+On first Spotify access, macOS should ask for Automation permission.
 
 ## Notarized Release
 
@@ -78,7 +69,7 @@ To package without notarization for local testing:
 That local-testing build is ad-hoc signed and may require right-clicking
 **Open** on first launch.
 
-On first Spotify access, macOS should ask for Automation permission. Lyrics are fetched from LRCLIB using `https://lrclib.net/api/search`.
+Lyrics are fetched from LRCLIB using `https://lrclib.net/api/search`.
 
 ## Website
 
