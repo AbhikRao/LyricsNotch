@@ -3,9 +3,14 @@ import Foundation
 
 public enum NotchMetrics {
     public static let openSize = CGSize(width: 640, height: 190)
-    public static let compactOpenSize = CGSize(width: 430, height: 156)
-    public static let minOpenSize = CGSize(width: 540, height: 176)
+    public static let compactOpenSize = CGSize(width: 510, height: 154)
+    public static let minOpenSize = CGSize(width: 560, height: 170)
     public static let maxOpenSize = CGSize(width: 880, height: 330)
+    public static let floatingOpenGap = CGFloat(12)
+    public static let hostPanelSize = CGSize(
+        width: maxOpenSize.width,
+        height: maxOpenSize.height + floatingOpenGap + 12
+    )
     public static let openCornerRadii = (top: CGFloat(19), bottom: CGFloat(24))
     public static let closedCornerRadii = (top: CGFloat(6), bottom: CGFloat(14))
     public static let fallbackClosedHeight = CGFloat(32)

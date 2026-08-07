@@ -23,8 +23,8 @@ struct LyricsNotchRootView: View {
                 }
         }
         .frame(
-            width: NotchMetrics.maxOpenSize.width,
-            height: NotchMetrics.maxOpenSize.height,
+            width: NotchMetrics.hostPanelSize.width,
+            height: NotchMetrics.hostPanelSize.height,
             alignment: .top
         )
         .padding(.bottom, 8)
@@ -77,6 +77,12 @@ struct LyricsNotchRootView: View {
                 }
             }
         }
+        .offset(y: viewModel.notchState == .open ? NotchMetrics.floatingOpenGap : 0)
+        .shadow(
+            color: viewModel.notchState == .open ? .black.opacity(0.38) : .clear,
+            radius: 18,
+            y: 8
+        )
         .animation(.bouncy.speed(1.2), value: viewModel.isHovering)
         .animation(.spring(response: 0.42, dampingFraction: 0.84), value: viewModel.notchState)
         .animation(.spring(response: 0.42, dampingFraction: 0.84), value: viewModel.notchSize)
@@ -103,7 +109,7 @@ struct LyricsNotchRootView: View {
         .blur(radius: 18)
         .blendMode(.screen)
         .opacity(viewModel.spotifyState.isPlaying && showGlow && !viewModel.isHovering ? 0.25 : 0)
-        .offset(y: 2)
+        .offset(y: viewModel.notchState == .open ? NotchMetrics.floatingOpenGap + 2 : 2)
         .allowsHitTesting(false)
         .animation(.easeInOut(duration: 1.0), value: viewModel.glowColor)
         .animation(.easeInOut(duration: 0.35), value: viewModel.spotifyState.isPlaying)
@@ -180,9 +186,15 @@ struct LyricsNotchRootView: View {
             width: viewModel.notchState == .open
                 ? viewModel.notchSize.width
                 : viewModel.closedNotchSize.width,
-            height: max(1, viewModel.closedNotchSize.height + (viewModel.isHovering ? 6 : 0)),
+            height: headerHeight,
             alignment: .center
         )
+    }
+
+    private var headerHeight: CGFloat {
+        viewModel.notchState == .open
+            ? 0
+            : max(1, viewModel.closedNotchSize.height + (viewModel.isHovering ? 6 : 0))
     }
 
     private var expandedContent: some View {
@@ -197,7 +209,7 @@ struct LyricsNotchRootView: View {
         .padding(.bottom, viewModel.shouldShowLyricsPane ? 18 : 16)
         .frame(
             width: viewModel.notchSize.width,
-            height: max(1, viewModel.notchSize.height - max(1, viewModel.closedNotchSize.height)),
+            height: max(1, viewModel.notchSize.height - headerHeight),
             alignment: .center
         )
         .blur(radius: viewModel.notchState == .closed ? 24 : 0)
@@ -221,13 +233,14 @@ struct LyricsNotchRootView: View {
     }
 
     private var compactSpotifyLayout: some View {
-        HStack(alignment: .center, spacing: 16) {
+        HStack(alignment: .center, spacing: 18) {
             ArtworkView(viewModel: viewModel, artworkSize: 82)
                 .frame(width: 96, height: 96)
 
             TrackControlsView(viewModel: viewModel)
-                .frame(maxWidth: .infinity, minHeight: 112, maxHeight: 118)
+                .frame(minWidth: 320, maxWidth: 320, minHeight: 112, maxHeight: 118)
         }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
 }
@@ -558,7 +571,7 @@ private struct LyricsPanelView: View {
                         .frame(
                             maxWidth: .infinity,
                             minHeight: 54,
-                            maxHeight: max(64, viewModel.notchSize.height - viewModel.closedNotchSize.height - 76),
+                            maxHeight: max(64, viewModel.notchSize.height - 76),
                             alignment: .center
                         )
                         .contentTransition(.opacity)

@@ -40,8 +40,8 @@ public final class LyricsNotchAppDelegate: NSObject, NSApplicationDelegate {
             contentRect: NSRect(
                 x: 0,
                 y: 0,
-                width: NotchMetrics.maxOpenSize.width,
-                height: NotchMetrics.maxOpenSize.height
+                width: NotchMetrics.hostPanelSize.width,
+                height: NotchMetrics.hostPanelSize.height
             ),
             styleMask: [.borderless, .nonactivatingPanel, .utilityWindow, .hudWindow],
             backing: .buffered,

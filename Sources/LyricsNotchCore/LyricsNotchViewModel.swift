@@ -157,7 +157,7 @@ public final class LyricsNotchViewModel: ObservableObject {
 
         resizeOpenSize(
             to: CGSize(
-                width: base.width + translation.width * 2,
+                width: base.width + translation.width,
                 height: base.height + translation.height
             )
         )
