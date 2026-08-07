@@ -88,7 +88,7 @@ final class CameraManager: ObservableObject {
 
 struct CameraPreview: View {
     let showCamera: Bool
-    @StateObject private var manager = CameraManager()
+    @ObservedObject var manager: CameraManager
 
     var body: some View {
         ZStack {

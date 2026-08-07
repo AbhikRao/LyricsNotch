@@ -226,12 +226,15 @@ public final class LyricsService {
         request.timeoutInterval = requestTimeout
 
         var latestError: Error?
-        for attempt in 0..<3 {
+        for attempt in 0..<2 {
             do {
                 return try await session.data(for: request)
             } catch {
                 latestError = error
-                if attempt < 2 {
+                if let urlError = error as? URLError, urlError.code == .timedOut {
+                    break
+                }
+                if attempt < 1 {
                     try? await Task.sleep(nanoseconds: UInt64(350_000_000 * (attempt + 1)))
                 }
             }

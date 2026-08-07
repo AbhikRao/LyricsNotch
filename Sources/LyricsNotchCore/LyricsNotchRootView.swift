@@ -8,36 +8,33 @@ struct LyricsNotchRootView: View {
     @AppStorage("showGlow") private var showGlow = true
     @AppStorage("showCamera") private var showCamera = false
 
-    @State private var isHovering = false
-    @State private var hoverWorkItem: DispatchWorkItem?
-    @State private var closeWorkItem: DispatchWorkItem?
-    @State private var hapticToggle = false
-
-    private let hoverDelay: TimeInterval = 0.28
+    private let hoverDelay: TimeInterval = 0.45
 
     var body: some View {
         ZStack(alignment: .top) {
             vibeGlow
 
             island
-                .onHover(perform: handleHover)
+                .onHover { hovering in
+                    viewModel.handleHover(hovering, openDelay: hoverDelay)
+                }
                 .onTapGesture {
                     viewModel.toggle()
                 }
         }
         .frame(
-            width: NotchMetrics.openSize.width,
-            height: NotchMetrics.openSize.height,
+            width: NotchMetrics.maxOpenSize.width,
+            height: NotchMetrics.maxOpenSize.height,
             alignment: .top
         )
         .padding(.bottom, 8)
         .shadow(
-            color: (viewModel.notchState == .open || isHovering)
+            color: (viewModel.notchState == .open || viewModel.isHovering)
                 ? .black.opacity(0.22)
                 : .clear,
             radius: viewModel.notchState == .open ? 6 : 4
         )
-        .sensoryFeedback(.alignment, trigger: hapticToggle)
+        .sensoryFeedback(.alignment, trigger: viewModel.hapticToggle)
         .onAppear {
             viewModel.setLyricsEnabled(showLyrics)
             viewModel.setGlowEnabled(showGlow)
@@ -72,8 +69,15 @@ struct LyricsNotchRootView: View {
             .mask {
                 notchMask
             }
+            .overlay(alignment: .bottomTrailing) {
+                if viewModel.notchState == .open, viewModel.shouldShowLyricsPane {
+                    ResizeHandle(viewModel: viewModel)
+                        .padding(.trailing, 12)
+                        .padding(.bottom, 10)
+                }
+            }
         }
-        .animation(.bouncy.speed(1.2), value: isHovering)
+        .animation(.bouncy.speed(1.2), value: viewModel.isHovering)
         .animation(.spring(response: 0.42, dampingFraction: 0.84), value: viewModel.notchState)
         .animation(.spring(response: 0.42, dampingFraction: 0.84), value: viewModel.notchSize)
     }
@@ -98,7 +102,7 @@ struct LyricsNotchRootView: View {
         }
         .blur(radius: 18)
         .blendMode(.screen)
-        .opacity(viewModel.spotifyState.isPlaying && showGlow && !isHovering ? 0.25 : 0)
+        .opacity(viewModel.spotifyState.isPlaying && showGlow && !viewModel.isHovering ? 0.25 : 0)
         .offset(y: 2)
         .allowsHitTesting(false)
         .animation(.easeInOut(duration: 1.0), value: viewModel.glowColor)
@@ -167,7 +171,7 @@ struct LyricsNotchRootView: View {
     private var header: some View {
         ZStack {
             if viewModel.notchState == .closed {
-                ClosedLiveActivity(viewModel: viewModel, isHovering: isHovering)
+                ClosedLiveActivity(viewModel: viewModel, isHovering: viewModel.isHovering)
             } else {
                 Color.clear
             }
@@ -176,14 +180,32 @@ struct LyricsNotchRootView: View {
             width: viewModel.notchState == .open
                 ? viewModel.notchSize.width
                 : viewModel.closedNotchSize.width,
-            height: max(1, viewModel.closedNotchSize.height + (isHovering ? 6 : 0)),
+            height: max(1, viewModel.closedNotchSize.height + (viewModel.isHovering ? 6 : 0)),
             alignment: .center
         )
     }
 
     private var expandedContent: some View {
+        Group {
+            if viewModel.shouldShowLyricsPane {
+                lyricsLayout
+            } else {
+                compactSpotifyLayout
+            }
+        }
+        .padding(.horizontal, viewModel.shouldShowLyricsPane ? 22 : 20)
+        .padding(.bottom, viewModel.shouldShowLyricsPane ? 18 : 16)
+        .frame(
+            width: viewModel.notchSize.width,
+            height: max(1, viewModel.notchSize.height - max(1, viewModel.closedNotchSize.height)),
+            alignment: .center
+        )
+        .blur(radius: viewModel.notchState == .closed ? 24 : 0)
+    }
+
+    private var lyricsLayout: some View {
         HStack(alignment: .center, spacing: 16) {
-            ArtworkView(viewModel: viewModel)
+            ArtworkView(viewModel: viewModel, artworkSize: 92)
                 .frame(width: 112, height: 112)
 
             TrackControlsView(viewModel: viewModel)
@@ -191,54 +213,23 @@ struct LyricsNotchRootView: View {
 
             ExpandedContentPane(
                 viewModel: viewModel,
-                showLyrics: showLyrics,
+                showLyrics: true,
                 showCamera: showCamera
             )
-            .frame(maxWidth: .infinity, minHeight: 116, maxHeight: 124)
-        }
-        .padding(.horizontal, 22)
-        .padding(.bottom, 18)
-        .frame(
-            width: NotchMetrics.openSize.width,
-            height: NotchMetrics.openSize.height - max(1, viewModel.closedNotchSize.height),
-            alignment: .center
-        )
-        .blur(radius: viewModel.notchState == .closed ? 24 : 0)
-    }
-
-    private func handleHover(_ hovering: Bool) {
-        hoverWorkItem?.cancel()
-        closeWorkItem?.cancel()
-
-        if hovering {
-            withAnimation(.bouncy.speed(1.2)) {
-                isHovering = true
-            }
-
-            if viewModel.notchState == .closed {
-                hapticToggle.toggle()
-            }
-
-            let task = DispatchWorkItem {
-                guard isHovering, viewModel.notchState == .closed else { return }
-                viewModel.open()
-            }
-            hoverWorkItem = task
-            DispatchQueue.main.asyncAfter(deadline: .now() + hoverDelay, execute: task)
-        } else {
-            let task = DispatchWorkItem {
-                withAnimation(.bouncy.speed(1.2)) {
-                    isHovering = false
-                }
-
-                if viewModel.notchState == .open {
-                    viewModel.close()
-                }
-            }
-            closeWorkItem = task
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: task)
+            .frame(maxWidth: .infinity, minHeight: 116, maxHeight: .infinity)
         }
     }
+
+    private var compactSpotifyLayout: some View {
+        HStack(alignment: .center, spacing: 16) {
+            ArtworkView(viewModel: viewModel, artworkSize: 82)
+                .frame(width: 96, height: 96)
+
+            TrackControlsView(viewModel: viewModel)
+                .frame(maxWidth: .infinity, minHeight: 112, maxHeight: 118)
+        }
+    }
+
 }
 
 private struct ClosedLiveActivity: View {
@@ -278,6 +269,7 @@ private struct ClosedLiveActivity: View {
 
 private struct ArtworkView: View {
     @ObservedObject var viewModel: LyricsNotchViewModel
+    var artworkSize: CGFloat = 92
 
     var body: some View {
         Button {
@@ -296,8 +288,8 @@ private struct ArtworkView: View {
                 Image(nsImage: viewModel.albumArt)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 96, height: 96)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .frame(width: artworkSize + 4, height: artworkSize + 4)
+                    .clipShape(RoundedRectangle(cornerRadius: max(10, artworkSize * 0.15), style: .continuous))
                     .scaleEffect(1.38)
                     .rotationEffect(.degrees(92))
                     .blur(radius: 40)
@@ -307,16 +299,16 @@ private struct ArtworkView: View {
             Image(nsImage: viewModel.albumArt)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(width: 92, height: 92)
-                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .frame(width: artworkSize, height: artworkSize)
+                .clipShape(RoundedRectangle(cornerRadius: max(10, artworkSize * 0.14), style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    RoundedRectangle(cornerRadius: max(10, artworkSize * 0.14), style: .continuous)
                         .strokeBorder(.white.opacity(0.08), lineWidth: 1)
                 }
                 .shadow(color: .black.opacity(0.45), radius: 12, y: 6)
                 .scaleEffect(viewModel.spotifyState.isPlaying ? 1 : 0.92)
         }
-        .frame(width: 112, height: 112)
+        .frame(width: artworkSize + 20, height: artworkSize + 20)
     }
 }
 
@@ -329,13 +321,13 @@ private struct ExpandedContentPane: View {
         Group {
             if showCamera && showLyrics {
                 HStack(spacing: 10) {
-                    CameraPreview(showCamera: showCamera)
+                    CameraPreview(showCamera: showCamera, manager: viewModel.cameraManager)
                         .frame(width: 98, height: 82)
 
                     LyricsPanelView(viewModel: viewModel)
                 }
             } else if showCamera {
-                CameraPreview(showCamera: showCamera)
+                CameraPreview(showCamera: showCamera, manager: viewModel.cameraManager)
             } else if showLyrics {
                 LyricsPanelView(viewModel: viewModel)
             } else {
@@ -343,6 +335,36 @@ private struct ExpandedContentPane: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct ResizeHandle: View {
+    @ObservedObject var viewModel: LyricsNotchViewModel
+
+    var body: some View {
+        Image(systemName: "arrow.down.right.and.arrow.up.left")
+            .font(.system(size: 9, weight: .bold))
+            .foregroundStyle(.white.opacity(0.36))
+            .frame(width: 24, height: 24)
+            .background {
+                Circle()
+                    .fill(.white.opacity(0.055))
+                    .overlay {
+                        Circle()
+                            .strokeBorder(.white.opacity(0.06), lineWidth: 1)
+                    }
+            }
+            .contentShape(Circle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        viewModel.updateResizeDrag(translation: value.translation)
+                    }
+                    .onEnded { _ in
+                        viewModel.endResizeDrag()
+                    }
+            )
+            .help("Drag to resize")
     }
 }
 
@@ -440,8 +462,6 @@ private struct TrackControlsView: View {
 
 private struct ProgressSlider: View {
     @ObservedObject var viewModel: LyricsNotchViewModel
-    @State private var isDragging = false
-    @State private var dragValue = 0.0
 
     var body: some View {
         TimelineView(.animation(minimumInterval: viewModel.spotifyState.isPlaying ? 0.08 : nil)) { timeline in
@@ -452,19 +472,18 @@ private struct ProgressSlider: View {
                 Slider(
                     value: Binding(
                         get: {
-                            isDragging ? dragValue : min(current, duration)
+                            viewModel.isScrubbing ? viewModel.scrubPosition : min(current, duration)
                         },
                         set: { newValue in
-                            dragValue = newValue
+                            viewModel.updateScrubPosition(newValue)
                         }
                     ),
                     in: 0...duration,
                     onEditingChanged: { editing in
-                        isDragging = editing
                         if editing {
-                            dragValue = current
+                            viewModel.beginScrubbing(current: current)
                         } else {
-                            viewModel.seek(to: dragValue)
+                            viewModel.endScrubbing()
                         }
                     }
                 )
@@ -472,7 +491,7 @@ private struct ProgressSlider: View {
                 .controlSize(.small)
 
                 HStack {
-                    Text(formatTime(isDragging ? dragValue : current))
+                    Text(formatTime(viewModel.isScrubbing ? viewModel.scrubPosition : current))
                     Spacer()
                     Text(formatTime(viewModel.spotifyState.duration))
                 }
@@ -534,9 +553,14 @@ private struct LyricsPanelView: View {
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
-                        .lineLimit(3)
-                        .minimumScaleFactor(0.72)
-                        .frame(maxWidth: .infinity, minHeight: 54, maxHeight: 64, alignment: .center)
+                        .lineLimit(viewModel.notchSize.height > 245 ? 5 : 4)
+                        .minimumScaleFactor(0.62)
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: 54,
+                            maxHeight: max(64, viewModel.notchSize.height - viewModel.closedNotchSize.height - 76),
+                            alignment: .center
+                        )
                         .contentTransition(.opacity)
                         .id(line.id)
                 } else {
@@ -544,10 +568,10 @@ private struct LyricsPanelView: View {
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.32))
                         .multilineTextAlignment(.center)
-                        .lineLimit(1)
+                        .lineLimit(viewModel.notchSize.height > 235 ? 2 : 1)
                         .truncationMode(.tail)
                         .minimumScaleFactor(0.78)
-                        .frame(maxWidth: .infinity, minHeight: 18, maxHeight: 18, alignment: .center)
+                        .frame(maxWidth: .infinity, minHeight: 18, maxHeight: viewModel.notchSize.height > 235 ? 32 : 18, alignment: .center)
                         .scaleEffect(0.98)
                         .blur(radius: 0.2)
                         .id(line.id)
