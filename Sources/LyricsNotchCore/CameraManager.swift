@@ -5,11 +5,14 @@ import SwiftUI
 final class CameraManager: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var authorizationDenied = false
+    @Published private(set) var setupFailed = false
 
     let session = AVCaptureSession()
     private var isConfigured = false
 
     func start() {
+        setupFailed = false
+
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
             configureIfNeeded()
@@ -59,10 +62,26 @@ final class CameraManager: ObservableObject {
             session.commitConfiguration()
         }
 
-        guard let device = AVCaptureDevice.default(for: .video),
-              let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input) else {
-            authorizationDenied = true
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera],
+            mediaType: .video,
+            position: .unspecified
+        )
+        guard let device = discovery.devices.first ?? AVCaptureDevice.default(for: .video) else {
+            setupFailed = true
+            return
+        }
+
+        let input: AVCaptureDeviceInput
+        do {
+            input = try AVCaptureDeviceInput(device: device)
+        } catch {
+            setupFailed = true
+            return
+        }
+
+        guard session.canAddInput(input) else {
+            setupFailed = true
             return
         }
 
@@ -71,7 +90,7 @@ final class CameraManager: ObservableObject {
     }
 
     private func startSession() {
-        guard isConfigured, !session.isRunning else {
+        guard isConfigured, !setupFailed, !session.isRunning else {
             isRunning = session.isRunning
             return
         }
@@ -93,12 +112,26 @@ struct CameraPreview: View {
     var body: some View {
         ZStack {
             CameraPreviewLayerView(session: manager.session)
-                .opacity(manager.authorizationDenied ? 0 : 1)
+                .opacity(isUnavailable ? 0 : 1)
 
-            if manager.authorizationDenied {
-                Image(systemName: "video.slash")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.55))
+            if isUnavailable {
+                VStack(spacing: 7) {
+                    Image(systemName: "video.slash")
+                        .font(.system(size: 20, weight: .semibold))
+
+                    Text(manager.authorizationDenied ? "Camera blocked" : "No camera")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                }
+                .foregroundStyle(.white.opacity(0.55))
+            } else if !manager.isRunning {
+                VStack(spacing: 7) {
+                    Image(systemName: "video")
+                        .font(.system(size: 20, weight: .semibold))
+
+                    Text("Starting camera")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                }
+                .foregroundStyle(.white.opacity(0.44))
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -118,6 +151,10 @@ struct CameraPreview: View {
         .onDisappear {
             manager.stop()
         }
+    }
+
+    private var isUnavailable: Bool {
+        manager.authorizationDenied || manager.setupFailed
     }
 }
 
@@ -143,6 +180,7 @@ private final class PreviewView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
         layer = CALayer()
+        layer?.masksToBounds = true
         layer?.addSublayer(previewLayer)
     }
 

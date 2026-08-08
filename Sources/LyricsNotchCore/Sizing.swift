@@ -3,10 +3,11 @@ import Foundation
 
 public enum NotchMetrics {
     public static let openSize = CGSize(width: 640, height: 190)
-    public static let compactOpenSize = CGSize(width: 510, height: 154)
+    public static let compactOpenSize = CGSize(width: 450, height: 118)
     public static let minOpenSize = CGSize(width: 560, height: 170)
     public static let maxOpenSize = CGSize(width: 880, height: 330)
-    public static let floatingOpenGap = CGFloat(12)
+    public static let floatingOpenGap = CGFloat(10)
+    public static let compactFloatingOpenGap = CGFloat(5)
     public static let hostPanelSize = CGSize(
         width: maxOpenSize.width,
         height: maxOpenSize.height + floatingOpenGap + 12

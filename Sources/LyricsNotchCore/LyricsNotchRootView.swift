@@ -38,12 +38,16 @@ struct LyricsNotchRootView: View {
         .onAppear {
             viewModel.setLyricsEnabled(showLyrics)
             viewModel.setGlowEnabled(showGlow)
+            viewModel.setCameraEnabled(showCamera)
         }
         .onChange(of: showLyrics) { _, enabled in
             viewModel.setLyricsEnabled(enabled)
         }
         .onChange(of: showGlow) { _, enabled in
             viewModel.setGlowEnabled(enabled)
+        }
+        .onChange(of: showCamera) { _, enabled in
+            viewModel.setCameraEnabled(enabled)
         }
     }
 
@@ -70,18 +74,18 @@ struct LyricsNotchRootView: View {
                 notchMask
             }
             .overlay(alignment: .bottomTrailing) {
-                if viewModel.notchState == .open, viewModel.shouldShowLyricsPane {
+                if viewModel.notchState == .open, usesFullLayout {
                     ResizeHandle(viewModel: viewModel)
                         .padding(.trailing, 12)
                         .padding(.bottom, 10)
                 }
             }
         }
-        .offset(y: viewModel.notchState == .open ? NotchMetrics.floatingOpenGap : 0)
+        .offset(y: openGap)
         .shadow(
             color: viewModel.notchState == .open ? .black.opacity(0.38) : .clear,
-            radius: 18,
-            y: 8
+            radius: usesFullLayout ? 18 : 10,
+            y: usesFullLayout ? 8 : 4
         )
         .animation(.bouncy.speed(1.2), value: viewModel.isHovering)
         .animation(.spring(response: 0.42, dampingFraction: 0.84), value: viewModel.notchState)
@@ -109,7 +113,7 @@ struct LyricsNotchRootView: View {
         .blur(radius: 18)
         .blendMode(.screen)
         .opacity(viewModel.spotifyState.isPlaying && showGlow && !viewModel.isHovering ? 0.25 : 0)
-        .offset(y: viewModel.notchState == .open ? NotchMetrics.floatingOpenGap + 2 : 2)
+        .offset(y: openGap + 2)
         .allowsHitTesting(false)
         .animation(.easeInOut(duration: 1.0), value: viewModel.glowColor)
         .animation(.easeInOut(duration: 0.35), value: viewModel.spotifyState.isPlaying)
@@ -197,16 +201,25 @@ struct LyricsNotchRootView: View {
             : max(1, viewModel.closedNotchSize.height + (viewModel.isHovering ? 6 : 0))
     }
 
+    private var usesFullLayout: Bool {
+        viewModel.shouldShowLyricsPane || showCamera
+    }
+
+    private var openGap: CGFloat {
+        guard viewModel.notchState == .open else { return 0 }
+        return usesFullLayout ? NotchMetrics.floatingOpenGap : NotchMetrics.compactFloatingOpenGap
+    }
+
     private var expandedContent: some View {
         Group {
-            if viewModel.shouldShowLyricsPane {
-                lyricsLayout
+            if usesFullLayout {
+                fullSpotifyLayout
             } else {
                 compactSpotifyLayout
             }
         }
-        .padding(.horizontal, viewModel.shouldShowLyricsPane ? 22 : 20)
-        .padding(.bottom, viewModel.shouldShowLyricsPane ? 18 : 16)
+        .padding(.horizontal, usesFullLayout ? 22 : 16)
+        .padding(.bottom, usesFullLayout ? 18 : 12)
         .frame(
             width: viewModel.notchSize.width,
             height: max(1, viewModel.notchSize.height - headerHeight),
@@ -215,7 +228,7 @@ struct LyricsNotchRootView: View {
         .blur(radius: viewModel.notchState == .closed ? 24 : 0)
     }
 
-    private var lyricsLayout: some View {
+    private var fullSpotifyLayout: some View {
         HStack(alignment: .center, spacing: 16) {
             ArtworkView(viewModel: viewModel, artworkSize: 92)
                 .frame(width: 112, height: 112)
@@ -225,7 +238,7 @@ struct LyricsNotchRootView: View {
 
             ExpandedContentPane(
                 viewModel: viewModel,
-                showLyrics: true,
+                showLyrics: viewModel.shouldShowLyricsPane,
                 showCamera: showCamera
             )
             .frame(maxWidth: .infinity, minHeight: 116, maxHeight: .infinity)
@@ -233,12 +246,12 @@ struct LyricsNotchRootView: View {
     }
 
     private var compactSpotifyLayout: some View {
-        HStack(alignment: .center, spacing: 18) {
-            ArtworkView(viewModel: viewModel, artworkSize: 82)
-                .frame(width: 96, height: 96)
+        HStack(alignment: .center, spacing: 14) {
+            ArtworkView(viewModel: viewModel, artworkSize: 64)
+                .frame(width: 76, height: 76)
 
-            TrackControlsView(viewModel: viewModel)
-                .frame(minWidth: 320, maxWidth: 320, minHeight: 112, maxHeight: 118)
+            CompactTrackControlsView(viewModel: viewModel)
+                .frame(width: 324, height: 86)
         }
         .frame(maxWidth: .infinity, alignment: .center)
     }
@@ -397,6 +410,105 @@ private struct AmbientOnlyPane: View {
                 .foregroundStyle(.white.opacity(0.52))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct CompactTrackControlsView: View {
+    @ObservedObject var viewModel: LyricsNotchViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(viewModel.spotifyState.title.isEmpty ? "Spotify" : viewModel.spotifyState.title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                Text(viewModel.spotifyState.artist.isEmpty ? statusSubtitle : viewModel.spotifyState.artist)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color(nsColor: viewModel.accentColor).opacity(0.86))
+                    .lineLimit(1)
+            }
+            .frame(height: 28, alignment: .topLeading)
+
+            CompactProgressSlider(viewModel: viewModel)
+
+            HStack(spacing: 7) {
+                IconButton(
+                    systemName: "shuffle",
+                    size: 23,
+                    isActive: viewModel.spotifyState.isShuffled,
+                    accentColor: viewModel.accentColor,
+                    help: "Shuffle",
+                    action: viewModel.toggleShuffle
+                )
+
+                IconButton(
+                    systemName: "backward.fill",
+                    size: 23,
+                    help: "Previous",
+                    action: viewModel.previousTrack
+                )
+
+                IconButton(
+                    systemName: viewModel.spotifyState.isPlaying ? "pause.fill" : "play.fill",
+                    size: 29,
+                    help: viewModel.spotifyState.isPlaying ? "Pause" : "Play",
+                    action: viewModel.togglePlay
+                )
+
+                IconButton(
+                    systemName: "forward.fill",
+                    size: 23,
+                    help: "Next",
+                    action: viewModel.nextTrack
+                )
+
+                IconButton(
+                    systemName: "repeat",
+                    size: 23,
+                    isActive: viewModel.spotifyState.repeatMode == .all,
+                    accentColor: viewModel.accentColor,
+                    help: "Repeat",
+                    action: viewModel.toggleRepeat
+                )
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
+    }
+
+    private var statusSubtitle: String {
+        if !viewModel.spotifyState.isRunning {
+            return "Open Spotify"
+        }
+
+        if !viewModel.spotifyState.isPlaying {
+            return "Paused"
+        }
+
+        return "Listening"
+    }
+}
+
+private struct CompactProgressSlider: View {
+    @ObservedObject var viewModel: LyricsNotchViewModel
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: viewModel.spotifyState.isPlaying ? 0.12 : nil)) { timeline in
+            let duration = max(1, viewModel.spotifyState.duration)
+            let current = viewModel.playbackTime(at: timeline.date)
+            let progress = min(max(current / duration, 0), 1)
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(.white.opacity(0.12))
+
+                Capsule()
+                    .fill(Color(nsColor: viewModel.accentColor).opacity(0.76))
+                    .frame(width: max(5, 292 * progress))
+            }
+        }
+        .frame(width: 292, height: 5)
     }
 }
 

@@ -32,6 +32,7 @@ public final class LyricsNotchViewModel: ObservableObject {
     private var resizeDragStartSize: CGSize?
     private var lyricsEnabled = UserDefaults.standard.object(forKey: "showLyrics") as? Bool ?? true
     private var glowEnabled = UserDefaults.standard.object(forKey: "showGlow") as? Bool ?? true
+    private var cameraEnabled = UserDefaults.standard.object(forKey: "showCamera") as? Bool ?? false
 
     public init() {
         let closedSize = NotchMetrics.closedSize()
@@ -46,6 +47,10 @@ public final class LyricsNotchViewModel: ObservableObject {
 
     public var shouldShowLyricsPane: Bool {
         lyricsEnabled && lyricsStatus == .synced && !lyricLines.isEmpty
+    }
+
+    private var shouldUseFullOpenSize: Bool {
+        shouldShowLyricsPane || cameraEnabled
     }
 
     deinit {
@@ -146,7 +151,7 @@ public final class LyricsNotchViewModel: ObservableObject {
         preferredOpenSize = clamped
         NotchMetrics.saveOpenSize(clamped)
 
-        if notchState == .open, shouldShowLyricsPane {
+        if notchState == .open, shouldUseFullOpenSize {
             notchSize = clamped
         }
     }
@@ -205,6 +210,16 @@ public final class LyricsNotchViewModel: ObservableObject {
                 glowColor = ColorExtractor.fallbackGlow
             }
         }
+    }
+
+    public func setCameraEnabled(_ enabled: Bool) {
+        cameraEnabled = enabled
+
+        if !enabled {
+            cameraManager.stop()
+        }
+
+        refreshOpenSizeIfNeeded()
     }
 
     public func togglePlay() {
@@ -345,7 +360,7 @@ public final class LyricsNotchViewModel: ObservableObject {
     }
 
     private var targetOpenSize: CGSize {
-        shouldShowLyricsPane ? preferredOpenSize : NotchMetrics.compactOpenSize
+        shouldUseFullOpenSize ? preferredOpenSize : NotchMetrics.compactOpenSize
     }
 
     private func refreshOpenSizeIfNeeded() {
